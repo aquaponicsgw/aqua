@@ -2,6 +2,7 @@ import feedparser
 import os
 import re
 import html
+import requests
 from mastodon import Mastodon
 from dotenv import load_dotenv
 from flask import Flask
@@ -24,8 +25,7 @@ mastodon = Mastodon(
 
 # RSS feeds to check
 RSS_FEEDS = [
-    "https://www.google.co.uk/alerts/feeds/18070038595192096982/3222385198977116976",
-    # Add more RSS feed URLs here
+    "https://www.google.co.uk/alerts/feeds/18070038595192096982/3222385198977116976"
 ]
 
 # File to store posted links
@@ -42,6 +42,13 @@ def clean_html(raw_html):
     text = re.sub('<[^<]+?>', '', raw_html)
     return html.unescape(text)
 
+def shorten_url_tinyurl(url):
+    try:
+        response = requests.get(f"https://tinyurl.com/api-create.php?url={url}")
+        return response.text if response.status_code == 200 else url
+    except:
+        return url  # Fallback to original if error
+
 new_posts = []
 
 # Parse and post from each feed
@@ -51,7 +58,8 @@ for feed_url in RSS_FEEDS:
         title = clean_html(entry.title)
         link = entry.link
         if link not in posted_links:
-            status = f"{title}\n{link}\n#aquaponics"
+            short_link = shorten_url_tinyurl(link)
+            status = f"{title}\n{short_link} #aquaponics"
             try:
                 mastodon.toot(status)
                 new_posts.append(link)
@@ -74,6 +82,3 @@ def home():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
-
-
-
