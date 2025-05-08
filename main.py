@@ -24,7 +24,8 @@ mastodon = Mastodon(
 
 # RSS feeds to check
 RSS_FEEDS = [
-    "https://www.google.co.uk/alerts/feeds/18070038595192096982/3222385198977116976"
+    "https://www.google.co.uk/alerts/feeds/18070038595192096982/3222385198977116976",
+    # Add more RSS feed URLs here
 ]
 
 # File to store posted links
@@ -50,7 +51,7 @@ for feed_url in RSS_FEEDS:
         title = clean_html(entry.title)
         link = entry.link
         if link not in posted_links:
-            status = f"{title}\n{link}"
+            status = f"{title}\n{link}\n#aquaponics"
             try:
                 mastodon.toot(status)
                 new_posts.append(link)
@@ -73,5 +74,6 @@ def home():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
+
 
 
