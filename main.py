@@ -1,64 +1,65 @@
-import os
-import time
 import feedparser
+import os
+import re
+import html
 from mastodon import Mastodon
-from flask import Flask
-from threading import Thread
 from dotenv import load_dotenv
 
-# === Load environment variables from .env ===
+# Load environment variables from .env
 load_dotenv()
-ACCESS_TOKEN = os.getenv("MASTODON_ACCESS_TOKEN")
-API_BASE_URL = os.getenv("MASTODON_API_BASE_URL")
 
-# === Connect to Mastodon API ===
-mastodon = Mastodon(access_token=ACCESS_TOKEN, api_base_url=API_BASE_URL)
+ACCESS_TOKEN = os.getenv('MASTODON_ACCESS_TOKEN')
+API_BASE_URL = os.getenv('MASTODON_API_BASE_URL')
 
-# === RSS Feed URL (customize this) ===
-RSS_FEED_URL = "https://www.google.co.uk/alerts/feeds/18070038595192096982/3222385198977116976"
+# Validate required env vars
+if not ACCESS_TOKEN or not API_BASE_URL:
+    raise ValueError("MASTODON_ACCESS_TOKEN and MASTODON_API_BASE_URL must be set in the .env file")
 
-# === Track posted items ===
-POSTED_LOG = "posted.txt"
+# Initialize Mastodon
+mastodon = Mastodon(
+    access_token=ACCESS_TOKEN,
+    api_base_url=API_BASE_URL
+)
+
+# RSS feeds to check
+RSS_FEEDS = [
+    "https://www.google.co.uk/alerts/feeds/18070038595192096982/3222385198977116976"
+]
+
+# File to store posted links
+POSTED_LOG = "posted_links.txt"
+
+# Load already posted links
 if os.path.exists(POSTED_LOG):
     with open(POSTED_LOG, "r") as f:
         posted_links = set(f.read().splitlines())
 else:
     posted_links = set()
 
-# === Bot: check feed and post ===
-def check_and_post():
-    global posted_links
-    feed = feedparser.parse(RSS_FEED_URL)
+def clean_html(raw_html):
+    text = re.sub('<[^<]+?>', '', raw_html)
+    return html.unescape(text)
+
+new_posts = []
+
+# Parse and post from each feed
+for feed_url in RSS_FEEDS:
+    feed = feedparser.parse(feed_url)
     for entry in feed.entries:
-        if entry.link not in posted_links:
-            status = f"{entry.title}\n{entry.link} #aquaponics"
+        title = clean_html(entry.title)
+        link = entry.link
+        if link not in posted_links:
+            status = f"{title}\n{link}"
             try:
-                mastodon.status_post(status)
-                print(f"✅ Posted: {status}")
-                posted_links.add(entry.link)
-                with open(POSTED_LOG, "a") as f:
-                    f.write(entry.link + "\n")
+                mastodon.toot(status)
+                new_posts.append(link)
+                print(f"Posted: {status}")
             except Exception as e:
-                print(f"❌ Error posting: {e}")
+                print(f"Failed to post: {status}\nError: {e}")
 
-# === Loop to check RSS feed every 5 mins ===
-def run_bot():
-    while True:
-        check_and_post()
-        time.sleep(300)
+# Save new posted links
+if new_posts:
+    with open(POSTED_LOG, "a") as f:
+        for link in new_posts:
+            f.write(link + "\n")
 
-# === Flask web server for uptime pings ===
-app = Flask(__name__)
-
-@app.route("/")
-def home():
-    return "✅ Aquaponics Mastodon Bot is running."
-
-def start_flask():
-    port = int(os.environ.get("PORT", 3000))
-    app.run(host="0.0.0.0", port=port)
-
-# === Start both bot and web server ===
-if __name__ == "__main__":
-    Thread(target=run_bot).start()
-    start_flask()
