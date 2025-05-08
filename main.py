@@ -4,6 +4,7 @@ import re
 import html
 from mastodon import Mastodon
 from dotenv import load_dotenv
+from flask import Flask
 
 # Load environment variables from .env
 load_dotenv()
@@ -62,4 +63,15 @@ if new_posts:
     with open(POSTED_LOG, "a") as f:
         for link in new_posts:
             f.write(link + "\n")
+
+# Flask app for HTTP access (required for Render to bind a port)
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Aquaponics Mastodon Bot is running!"
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080)
+
 
