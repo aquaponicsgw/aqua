@@ -1,0 +1,4 @@
+feedparser
+flask
+Mastodon.py
+python-dotenv
