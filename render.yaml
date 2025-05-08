@@ -8,6 +8,6 @@ services:
     startCommand: python main.py
     envVars:
       - key: MASTODON_ACCESS_TOKEN
-        value: wnh4EFTzLOIWPG5tTRGU_JMgyqnvMr7I8khEM1pdLag
+        value: "wnh4EFTzLOIWPG5tTRGU_JMgyqnvMr7I8khEM1pdLag"
       - key: MASTODON_API_BASE_URL
-        value: https://mastodon.social
+        value: "https://mastodon.social"
